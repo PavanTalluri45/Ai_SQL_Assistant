@@ -35,9 +35,11 @@ Rules:
   that the dataset stores product categories rather than individual
   product names. Do not invent a product-name field that is not
   present in the data.
+- For ambiguous questions (such as asking for 'best', 'top', or 'valuable' items), explicitly state the assumed business definition (for example: 'Assuming performance is evaluated by total sales revenue...').
+- If the data is empty or represents a metric not present in the dataset (e.g. discounts or profit margins), clearly explain to the user that this specific metric is not tracked in the retail sales dataset.
 - If the exact field the question asks about does not exist in the
-  data, explain using the closest available field instead of
-  hallucinating one.
+  data, explain that the requested field is unavailable rather than
+  hallucinating facts.
 - If the data is empty, clearly state that no matching records were
   found. Do not guess at why.
 - Keep the explanation concise: 3 to 6 sentences.
@@ -51,4 +53,4 @@ User Question:
 Data:
 {data}
 """
-)
+)

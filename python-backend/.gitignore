@@ -37,3 +37,5 @@ tmp/
 
 # Jupyter
 .ipynb_checkpoints/
+
+evaluation/results/

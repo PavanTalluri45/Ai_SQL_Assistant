@@ -153,24 +153,25 @@ def process_question(
     rows = execution["data"]
     _step_done()
 
-    # Step 5: Explain results
-    _step(5, "Generating Business Explanation...")
+    # Step 5 & 6: Concurrently generate Business Explanation and Select Visualization
+    _step(5, "Generating Business Explanation & Selecting Visualization (Concurrent)...")
     try:
-        answer = explain_results(question=question, rows=rows)
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_explain = executor.submit(explain_results, question=question, rows=rows)
+            future_vis = executor.submit(_select_visualization_safe, question=question, rows=rows)
+            answer = future_explain.result()
+            visualization = future_vis.result()
         _step_done()
     except Exception as e:
-        logger.error("Result explanation failed: %s", e)
-        return build_error_response(
-            question,
-            f"Failed to explain results: {e}",
-            time.perf_counter() - start_time,
-            sql=validated_sql,
-        )
-
-    # Step 6: Select Visualization
-    _step(6, "Selecting Visualization...")
-    visualization = _select_visualization_safe(question=question, rows=rows)
-    _step_done()
+        logger.error("Post-execution processing failed: %s", e)
+        # Graceful fallback: attempt explanation directly if thread pool raised
+        try:
+            answer = explain_results(question=question, rows=rows)
+        except Exception:
+            answer = "Could not generate business explanation."
+        visualization = _select_visualization_safe(question=question, rows=rows)
+        _step_done()
 
     execution_time = time.perf_counter() - start_time
     return build_response(
@@ -187,7 +188,7 @@ def process_question(
 # Terminal progress helpers
 # ----------------------------------------------------------------------
 
-_TOTAL_STEPS = 6
+_TOTAL_STEPS = 5
 
 
 def _step(step_number: int, label: str) -> None:

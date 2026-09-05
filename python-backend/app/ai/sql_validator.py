@@ -142,17 +142,31 @@ def _check_dangerous_keywords(sql: str) -> None:
             )
 
 
+def _mask_function_from_clauses(sql: str) -> str:
+    """
+    Remove SQL function-internal 'FROM' keywords such as:
+    - EXTRACT(field FROM expr)
+    - TRIM(...)
+    - SUBSTRING(... FROM ...)
+    so they are not misinterpreted as table source clauses.
+    """
+    # Mask EXTRACT( ... FROM ... )
+    sql = re.sub(r"(?i)\bEXTRACT\s*\([^)]*?\bFROM\b[^)]*?\)", "EXTRACT()", sql)
+    # Mask TRIM( ... FROM ... )
+    sql = re.sub(r"(?i)\bTRIM\s*\([^)]*?\bFROM\b[^)]*?\)", "TRIM()", sql)
+    # Mask SUBSTRING( ... FROM ... )
+    sql = re.sub(r"(?i)\bSUBSTRING\s*\([^)]*?\bFROM\b[^)]*?\)", "SUBSTRING()", sql)
+    return sql
+
+
 def _extract_referenced_tables(sql: str) -> List[str]:
     """
     Extract table-like identifiers referenced via FROM or JOIN clauses.
-
-    This is a lightweight regex-based extraction, sufficient for the
-    single-table analytical use case this validator protects. It is
-    NOT a full SQL parser and is not intended to validate arbitrary
-    general-purpose SQL.
+    Properly handles SQL functions that contain 'FROM' internally (e.g. EXTRACT).
     """
+    cleaned_sql = _mask_function_from_clauses(sql)
     pattern = r"(?i)\b(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_\.]*)"
-    matches = re.findall(pattern, sql)
+    matches = re.findall(pattern, cleaned_sql)
     return [m.upper() for m in matches]
 
 
