@@ -1,4 +1,4 @@
-# Insight Flow
+# AI SQL Assistant
 
 <p align="center">
 
